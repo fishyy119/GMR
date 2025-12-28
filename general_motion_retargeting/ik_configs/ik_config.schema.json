@@ -1,0 +1,191 @@
+{
+  "properties": {
+    "robot_root_name": {
+      "title": "Robot Root Name",
+      "type": "string"
+    },
+    "human_root_name": {
+      "title": "Human Root Name",
+      "type": "string"
+    },
+    "human_upper_root_name": {
+      "title": "Human Upper Root Name",
+      "type": "string"
+    },
+    "ground_height": {
+      "title": "Ground Height",
+      "type": "number"
+    },
+    "human_height_assumption": {
+      "title": "Human Height Assumption",
+      "type": "number"
+    },
+    "upper_body_scale": {
+      "title": "Upper Body Scale",
+      "type": "number"
+    },
+    "lower_body_scale": {
+      "title": "Lower Body Scale",
+      "type": "number"
+    },
+    "upper_body_name_list": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Upper Body Name List",
+      "type": "array"
+    },
+    "lower_body_name_list": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Lower Body Name List",
+      "type": "array"
+    },
+    "human_scale_table": {
+      "additionalProperties": {
+        "type": "number"
+      },
+      "title": "Human Scale Table",
+      "type": "object"
+    },
+    "ik_match_table": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Ik Match Table",
+      "type": "object"
+    },
+    "use_ik_match_table1": {
+      "title": "Use Ik Match Table1",
+      "type": "boolean"
+    },
+    "use_ik_match_table2": {
+      "title": "Use Ik Match Table2",
+      "type": "boolean"
+    },
+    "ik_param1": {
+      "additionalProperties": {
+        "maxItems": 4,
+        "minItems": 4,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          {
+            "maxItems": 4,
+            "minItems": 4,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Ik Param1",
+      "type": "object"
+    },
+    "ik_param2": {
+      "additionalProperties": {
+        "maxItems": 4,
+        "minItems": 4,
+        "prefixItems": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          {
+            "maxItems": 4,
+            "minItems": 4,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Ik Param2",
+      "type": "object"
+    }
+  },
+  "required": [
+    "robot_root_name",
+    "human_root_name",
+    "human_upper_root_name",
+    "ground_height",
+    "human_height_assumption",
+    "upper_body_scale",
+    "lower_body_scale",
+    "upper_body_name_list",
+    "lower_body_name_list",
+    "human_scale_table",
+    "ik_match_table",
+    "use_ik_match_table1",
+    "use_ik_match_table2",
+    "ik_param1",
+    "ik_param2"
+  ],
+  "title": "RetargetConfig",
+  "type": "object"
+}

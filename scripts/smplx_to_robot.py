@@ -172,6 +172,9 @@ if __name__ == "__main__":
             human_pos_offset=np.array([0.0, 0.0, 0.0]),
             show_human_body_name=False,
             rate_limit=args.rate_limit,
+            show_ref_point=True,
+            follow_camera=False,
+            robot_joints_to_show=list(retarget.ik_match_table.keys()),
         )
         if save_path is not None:
             qpos_list.append(qpos)

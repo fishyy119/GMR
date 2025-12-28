@@ -1,4 +1,4 @@
-import json
+from typing import List
 
 import mink
 import mujoco as mj
@@ -6,6 +6,7 @@ import numpy as np
 from rich import print
 from scipy.spatial.transform import Rotation as R
 
+from .models.ik_config import RetargetConfig
 from .params import IK_CONFIG_DICT, ROBOT_XML_DICT
 from .utils.smpl import HumanData
 
@@ -17,7 +18,7 @@ class GeneralMotionRetargeting:
         self,
         src_human: str,
         tgt_robot: str,
-        actual_human_height: float = None,
+        actual_human_height: float | None = None,
         solver: str = "daqp",  # change from "quadprog" to "daqp".
         damping: float = 5e-1,  # change from 1e-1 to 1e-2.
         verbose: bool = True,
@@ -56,31 +57,42 @@ class GeneralMotionRetargeting:
                 print(f"Motor ID {i}: {motor_name}")
 
         # Load the IK config
-        with open(IK_CONFIG_DICT[src_human][tgt_robot]) as f:
-            ik_config = json.load(f)
+        ik_config = RetargetConfig.model_validate_json(IK_CONFIG_DICT[src_human][tgt_robot].read_text(encoding="utf-8"))
         if verbose:
             print("Use IK config: ", IK_CONFIG_DICT[src_human][tgt_robot])
 
         # compute the scale ratio based on given human height and the assumption in the IK config
         # * 论文第三步公式的前面一部分，在这里缩放了
         if actual_human_height is not None:
-            ratio = actual_human_height / ik_config["human_height_assumption"]
+            ratio = actual_human_height / ik_config.human_height_assumption
         else:
             ratio = 1.0
 
+        self.upper_body_name_list = ik_config.upper_body_name_list
+        self.lower_body_name_list = ik_config.lower_body_name_list
+        self.upper_body_scale = ik_config.upper_body_scale
+        self.lower_body_scale = ik_config.lower_body_scale
+        self.ik_match_table = ik_config.ik_match_table
+
         # adjust the human scale table
-        for key in ik_config["human_scale_table"].keys():
-            ik_config["human_scale_table"][key] = ik_config["human_scale_table"][key] * ratio
+        for key in ik_config.human_scale_table.keys():
+            if key in self.upper_body_name_list:
+                ik_config.human_scale_table[key] = ik_config.human_scale_table[key] * ratio * self.upper_body_scale
+            elif key in self.lower_body_name_list:
+                ik_config.human_scale_table[key] = ik_config.human_scale_table[key] * ratio * self.lower_body_scale
+            else:
+                ik_config.human_scale_table[key] = ik_config.human_scale_table[key] * ratio
 
         # used for retargeting
-        self.ik_match_table1 = ik_config["ik_match_table1"]
-        self.ik_match_table2 = ik_config["ik_match_table2"]
-        self.human_root_name = ik_config["human_root_name"]
-        self.robot_root_name = ik_config["robot_root_name"]
-        self.use_ik_match_table1 = ik_config["use_ik_match_table1"]
-        self.use_ik_match_table2 = ik_config["use_ik_match_table2"]
-        self.human_scale_table = ik_config["human_scale_table"]
-        self.ground = ik_config["ground_height"] * np.array([0, 0, 1])
+        self.ik_param1 = ik_config.ik_param1
+        self.ik_param2 = ik_config.ik_param2
+        self.human_root_name = ik_config.human_root_name
+        self.human_upper_root_name = ik_config.human_upper_root_name
+        self.robot_root_name = ik_config.robot_root_name
+        self.use_ik_match_table1 = ik_config.use_ik_match_table1
+        self.use_ik_match_table2 = ik_config.use_ik_match_table2
+        self.human_scale_table = ik_config.human_scale_table
+        self.ground = ik_config.ground_height * np.array([0, 0, 1])
 
         self.max_iter = 10
 
@@ -97,7 +109,7 @@ class GeneralMotionRetargeting:
         self.task_errors1 = {}
         self.task_errors2 = {}
 
-        self.ik_limits = [mink.ConfigurationLimit(self.model)]
+        self.ik_limits: List[mink.Limit] = [mink.ConfigurationLimit(self.model)]
         if use_velocity_limit:
             VELOCITY_LIMITS = {k: 3 * np.pi for k in self.robot_motor_names.keys()}
             self.ik_limits.append(mink.VelocityLimit(self.model, VELOCITY_LIMITS))
@@ -115,8 +127,9 @@ class GeneralMotionRetargeting:
         self.tasks1 = []
         self.tasks2 = []
 
-        for frame_name, entry in self.ik_match_table1.items():
-            body_name, pos_weight, rot_weight, pos_offset, rot_offset = entry
+        for frame_name, entry in self.ik_param1.items():
+            pos_weight, rot_weight, pos_offset, rot_offset = entry
+            body_name = self.ik_match_table[frame_name]
             if pos_weight != 0 or rot_weight != 0:
                 task = mink.FrameTask(
                     frame_name=frame_name,
@@ -131,8 +144,9 @@ class GeneralMotionRetargeting:
                 self.tasks1.append(task)
                 self.task_errors1[task] = []
 
-        for frame_name, entry in self.ik_match_table2.items():
-            body_name, pos_weight, rot_weight, pos_offset, rot_offset = entry
+        for frame_name, entry in self.ik_param2.items():
+            pos_weight, rot_weight, pos_offset, rot_offset = entry
+            body_name = self.ik_match_table[frame_name]
             if pos_weight != 0 or rot_weight != 0:
                 task = mink.FrameTask(
                     frame_name=frame_name,
@@ -150,7 +164,7 @@ class GeneralMotionRetargeting:
     def update_targets(self, human_data: HumanData, offset_to_ground=False):
         # scale human data in local frame
         human_data = self.to_numpy(human_data)
-        human_data = self.scale_human_data(human_data, self.human_root_name, self.human_scale_table)
+        human_data = self.scale_human_data(human_data)
         human_data = self.offset_human_data(human_data, self.pos_offsets1, self.rot_offsets1)
         human_data = self.apply_ground_offset(human_data)
         if offset_to_ground:
@@ -177,14 +191,16 @@ class GeneralMotionRetargeting:
             # Solve the IK problem
             curr_error = self.error1()
             dt = self.configuration.model.opt.timestep
-            vel1 = mink.solve_ik(self.configuration, self.tasks1, dt, self.solver, self.damping, self.ik_limits)
+            vel1 = mink.solve_ik(self.configuration, self.tasks1, dt, self.solver, self.damping, limits=self.ik_limits)
             self.configuration.integrate_inplace(vel1, dt)
             next_error = self.error1()
             num_iter = 0
             while curr_error - next_error > 0.001 and num_iter < self.max_iter:
                 curr_error = next_error
                 dt = self.configuration.model.opt.timestep
-                vel1 = mink.solve_ik(self.configuration, self.tasks1, dt, self.solver, self.damping, self.ik_limits)
+                vel1 = mink.solve_ik(
+                    self.configuration, self.tasks1, dt, self.solver, self.damping, limits=self.ik_limits
+                )
                 self.configuration.integrate_inplace(vel1, dt)
                 next_error = self.error1()
                 num_iter += 1
@@ -192,7 +208,7 @@ class GeneralMotionRetargeting:
         if self.use_ik_match_table2:
             curr_error = self.error2()
             dt = self.configuration.model.opt.timestep
-            vel2 = mink.solve_ik(self.configuration, self.tasks2, dt, self.solver, self.damping, self.ik_limits)
+            vel2 = mink.solve_ik(self.configuration, self.tasks2, dt, self.solver, self.damping, limits=self.ik_limits)
             self.configuration.integrate_inplace(vel2, dt)
             next_error = self.error2()
             num_iter = 0
@@ -200,7 +216,9 @@ class GeneralMotionRetargeting:
                 curr_error = next_error
                 # Solve the IK problem with the second task
                 dt = self.configuration.model.opt.timestep
-                vel2 = mink.solve_ik(self.configuration, self.tasks2, dt, self.solver, self.damping, self.ik_limits)
+                vel2 = mink.solve_ik(
+                    self.configuration, self.tasks2, dt, self.solver, self.damping, limits=self.ik_limits
+                )
                 self.configuration.integrate_inplace(vel2, dt)
 
                 next_error = self.error2()
@@ -219,30 +237,58 @@ class GeneralMotionRetargeting:
             human_data[body_name] = [np.asarray(human_data[body_name][0]), np.asarray(human_data[body_name][1])]
         return human_data
 
-    def scale_human_data(self, human_data, human_root_name, human_scale_table):
+    def scale_human_data(self, human_data: HumanData):
         """
         * 论文里的步骤3：非均匀局部缩放（前面的系数还有一个缩放在__init__中）
         """
+        human_root_name = self.human_root_name
+        human_upper_root_name = self.human_upper_root_name
+        human_scale_table = self.human_scale_table
+
         human_data_local = {}
         root_pos, root_quat = human_data[human_root_name]
+        upper_root_pos, upper_root_quat = human_data[human_upper_root_name]
 
         # scale root
         scaled_root_pos = human_scale_table[human_root_name] * root_pos
+        scaled_upper_root_pos = (
+            human_scale_table[human_upper_root_name] * (human_data[human_upper_root_name][0] - root_pos)
+            + scaled_root_pos
+        )
 
         # scale other body parts in local frame
         for body_name in human_data.keys():
-            if body_name not in human_scale_table:
+            if body_name not in self.ik_match_table.values():
                 continue
-            if body_name == human_root_name:
+            if body_name == human_root_name or body_name == human_upper_root_name:
                 continue
             else:
                 # transform to local frame (only position)
-                human_data_local[body_name] = (human_data[body_name][0] - root_pos) * human_scale_table[body_name]
+                if body_name in self.upper_body_name_list:
+                    human_data_local[body_name] = (human_data[body_name][0] - upper_root_pos) * human_scale_table[
+                        body_name
+                    ]
+                else:
+                    human_data_local[body_name] = (human_data[body_name][0] - root_pos) * human_scale_table[body_name]
 
         # transform the human data back to the global frame
-        human_data_global = {human_root_name: (scaled_root_pos, root_quat)}
+        human_data_global = {
+            human_root_name: (scaled_root_pos, root_quat),
+        }
+        if human_upper_root_name in self.ik_match_table.values() and human_upper_root_name != human_root_name:
+            human_data_global[human_upper_root_name] = (scaled_upper_root_pos, upper_root_quat)
+
         for body_name in human_data_local.keys():
-            human_data_global[body_name] = (human_data_local[body_name] + scaled_root_pos, human_data[body_name][1])
+            if body_name in self.upper_body_name_list:
+                human_data_global[body_name] = (
+                    human_data_local[body_name] + scaled_upper_root_pos,
+                    human_data[body_name][1],
+                )
+            else:
+                human_data_global[body_name] = (
+                    human_data_local[body_name] + scaled_root_pos,
+                    human_data[body_name][1],
+                )
 
         return human_data_global
 

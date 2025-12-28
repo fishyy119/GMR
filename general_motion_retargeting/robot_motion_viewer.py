@@ -1,8 +1,8 @@
 # pyright: standard
 # pyright: reportAttributeAccessIssue=false
-import os
 import time
 from pathlib import Path
+from typing import List
 
 import imageio
 import mujoco as mj
@@ -18,6 +18,24 @@ from general_motion_retargeting import (
     VIEWER_CAM_DISTANCE_DICT,
 )
 from general_motion_retargeting.utils.smpl import HumanData
+
+
+def draw_point(pos: np.ndarray, viewer, size: float = 0.02, color=(1.0, 0.0, 0.0, 1.0)):
+    scn = viewer.user_scn
+    if scn.ngeom >= scn.maxgeom:
+        return
+
+    geom = scn.geoms[scn.ngeom]
+    scn.ngeom += 1
+
+    mj.mjv_initGeom(
+        geom,
+        type=mj.mjtGeom.mjGEOM_SPHERE,
+        size=[size, size, size],
+        pos=pos + np.array([1, 0, 0]),
+        mat=np.eye(3).flatten(),
+        rgba=color,
+    )
 
 
 def draw_frame(
@@ -67,6 +85,7 @@ class RobotMotionViewer:
         video_height=480,
         keyboard_callback=None,
     ):
+        self.is_first_step = True
 
         self.robot_type = robot_type
         self.xml_path = ROBOT_XML_DICT[robot_type]
@@ -112,10 +131,12 @@ class RobotMotionViewer:
         # scale for human point visualization
         human_point_scale=0.1,
         # human pos offset add for visualization
-        human_pos_offset=np.array([0.0, 0.0, 0]),
+        human_pos_offset=np.array([0.0, 0.0, 0.0]),
         # rate limit
         rate_limit=True,
         follow_camera=True,
+        show_ref_point=False,
+        robot_joints_to_show: List[str] | None = None,
     ):
         """
         by default visualize robot motion.
@@ -133,15 +154,19 @@ class RobotMotionViewer:
 
         mj.mj_forward(self.model, self.data)
 
-        if follow_camera:
-            self.viewer.cam.lookat = self.data.xpos[self.model.body(self.robot_base).id]
+        if follow_camera or self.is_first_step:
+            self.viewer.cam.lookat = self.data.xpos[self.model.body(self.robot_base).id] + (
+                np.array([0.5, 0, 0]) if show_ref_point else np.zeros(3)
+            )
             self.viewer.cam.distance = self.viewer_cam_distance
             self.viewer.cam.elevation = -10  # 正面视角，轻微向下看
-            # self.viewer.cam.azimuth = 180    # 正面朝向机器人
+            # self.viewer.cam.azimuth = 60  # 正面朝向机器人
+
+            self.is_first_step = False
 
         if human_motion_data is not None:
             # Clean custom geometry
-            self.viewer.user_scn.ngeom = 0
+            self.viewer.user_scn.ngeom = 0  # type: ignore
             # Draw the task targets for reference
             for human_body_name, (pos, rot) in human_motion_data.items():
                 draw_frame(
@@ -152,6 +177,14 @@ class RobotMotionViewer:
                     pos_offset=human_pos_offset,
                     joint_name=human_body_name if show_human_body_name else None,
                 )
+                if show_ref_point:
+                    draw_point(pos, self.viewer, size=0.03, color=(0.0, 1.0, 0.0, 1.0))
+
+        if show_ref_point and robot_joints_to_show is not None:
+            for name in robot_joints_to_show:
+                body_id = self.model.body(name).id
+                body_pos = self.data.xpos[body_id]
+                draw_point(body_pos, self.viewer, size=0.03, color=(1.0, 0.0, 0.0, 1.0))
 
         self.viewer.sync()
         if rate_limit is True:

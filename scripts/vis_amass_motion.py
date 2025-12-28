@@ -14,7 +14,6 @@ from rich import print
 from tqdm import tqdm
 
 REPO_ROOT = Path(__file__).parent.parent
-is_grab = False  # GRAB数据集的fps字段名写错了
 
 
 class MotionData(TypedDict):
@@ -31,7 +30,7 @@ def load_amass(npz_path: Path, device: str = "cpu") -> MotionData:
     poses = torch.from_numpy(data["poses"]).float().to(device)  # (T, 72)
     trans = torch.from_numpy(data["trans"]).float().to(device)  # (T, 3)
 
-    fps_key = "mocap_frame_rate" if is_grab else "mocap_framerate"
+    fps_key = "mocap_frame_rate"
 
     try:
         fps = int(data[fps_key])
@@ -166,8 +165,6 @@ if __name__ == "__main__":
         gender="neutral",
     )
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    if "GRAB" in str(args.input):
-        is_grab = True
 
     from general_motion_retargeting.pyrender_utils import add_world_axes, look_at_matrix
 

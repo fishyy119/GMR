@@ -1,0 +1,13 @@
+{
+    "files.exclude": {
+        "**/__pycache__": true,
+    },
+    "json.schemas": [
+        {
+            "fileMatch": [
+                "general_motion_retargeting/ik_configs/*.json"
+            ],
+            "url": "./general_motion_retargeting/ik_configs/ik_config.schema.json"
+        }
+    ]
+}

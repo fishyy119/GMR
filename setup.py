@@ -29,6 +29,7 @@ setup(
         "imageio[ffmpeg]",
         "pyrender",
         "jaxtyping",
+        "pydantic>=2.0,<3.0",
     ],
     python_requires=">=3.10",
 )
