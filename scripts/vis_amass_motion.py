@@ -1,9 +1,7 @@
 # pyright: standard
-# pip install pyrender==0.1.45
-
 import argparse
-from operator import is_
 from pathlib import Path
+from typing import List, TypedDict
 
 import imageio.v2 as iio
 import numpy as np
@@ -11,6 +9,7 @@ import pyrender
 import smplx
 import torch
 import trimesh
+from jaxtyping import Float, Int
 from rich import print
 from tqdm import tqdm
 
@@ -18,7 +17,14 @@ REPO_ROOT = Path(__file__).parent.parent
 is_grab = False  # GRAB数据集的fps字段名写错了
 
 
-def load_amass(npz_path: Path, device: str = "cpu"):
+class MotionData(TypedDict):
+    global_orient: Float[torch.Tensor, "T 3"]
+    body_pose: Float[torch.Tensor, "T 63"]
+    transl: Float[torch.Tensor, "T 3"]
+    fps: int
+
+
+def load_amass(npz_path: Path, device: str = "cpu") -> MotionData:
     data = np.load(npz_path)
 
     # numpy → torch
@@ -44,9 +50,10 @@ def load_amass(npz_path: Path, device: str = "cpu"):
         "fps": fps,
     }
 
-    return motion
+    return MotionData(**motion)
 
 
+@torch.inference_mode()
 def render_amass_motion(
     smpl,
     motion_path: Path,
@@ -76,21 +83,20 @@ def render_amass_motion(
         add_world_axes(scene)
 
     T = motion["transl"].shape[0]
-    center = motion["transl"].mean(axis=0)
+    center = motion["transl"].mean(dim=0)
     mesh_node = None
 
     target_fps = 30
     step = int(motion["fps"] / target_fps)
-    frames = []
+    frames: List[Int[np.ndarray, "H W C"]] = []
 
     for i in tqdm(range(0, T, step), desc="Rendering AMASS motion", leave=False):
-        with torch.no_grad():
-            smpl_out = smpl(
-                global_orient=motion["global_orient"][None, i],
-                body_pose=motion["body_pose"][None, i],
-                transl=motion["transl"][None, i],
-                # betas=motion["betas"][None],  # 使用中性身体形状
-            )
+        smpl_out = smpl(
+            global_orient=motion["global_orient"][None, i],
+            body_pose=motion["body_pose"][None, i],
+            transl=motion["transl"][None, i],
+            # betas=motion["betas"][None],  # 使用中性身体形状
+        )
 
         vertices = smpl_out.vertices[0].cpu().numpy()
         vertices -= center.cpu().numpy()  # 居中显示
