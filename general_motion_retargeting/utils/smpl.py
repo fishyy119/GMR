@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import smplx
@@ -176,7 +176,10 @@ def slerp(rot1, rot2, t):
     return R.from_quat(q)
 
 
-def get_smplx_data_offline_fast(smplx_data, body_model, smplx_output, tgt_fps=30) -> Tuple[List, int]:
+HumanData = Dict[str, Tuple[np.ndarray, np.ndarray]]
+
+
+def get_smplx_data_offline_fast(smplx_data, body_model, smplx_output, tgt_fps=30) -> Tuple[List[HumanData], int]:
     """
     Must return a dictionary with the following structure:
     {

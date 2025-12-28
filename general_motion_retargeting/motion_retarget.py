@@ -7,6 +7,7 @@ from rich import print
 from scipy.spatial.transform import Rotation as R
 
 from .params import IK_CONFIG_DICT, ROBOT_XML_DICT
+from .utils.smpl import HumanData
 
 
 class GeneralMotionRetargeting:
@@ -146,7 +147,7 @@ class GeneralMotionRetargeting:
                 self.tasks2.append(task)
                 self.task_errors2[task] = []
 
-    def update_targets(self, human_data, offset_to_ground=False):
+    def update_targets(self, human_data: HumanData, offset_to_ground=False):
         # scale human data in local frame
         human_data = self.to_numpy(human_data)
         human_data = self.scale_human_data(human_data, self.human_root_name, self.human_scale_table)

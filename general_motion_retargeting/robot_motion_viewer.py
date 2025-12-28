@@ -17,6 +17,7 @@ from general_motion_retargeting import (
     ROBOT_XML_DICT,
     VIEWER_CAM_DISTANCE_DICT,
 )
+from general_motion_retargeting.utils.smpl import HumanData
 
 
 def draw_frame(
@@ -106,7 +107,7 @@ class RobotMotionViewer:
         root_rot,
         dof_pos,
         # human data
-        human_motion_data=None,
+        human_motion_data: HumanData | None = None,
         show_human_body_name=False,
         # scale for human point visualization
         human_point_scale=0.1,

@@ -6,32 +6,19 @@ from pathlib import Path
 import numpy as np
 from rich import print
 
-from general_motion_retargeting import GeneralMotionRetargeting as GMR
-from general_motion_retargeting import RobotMotionViewer
-from general_motion_retargeting.utils.smpl import (
-    get_smplx_data_offline_fast,
-    load_smplx_file,
-)
-
 
 def path_expand(s) -> Path:
     return Path(s).expanduser().resolve(strict=False)
 
 
-if __name__ == "__main__":
-    HERE = Path(__file__).parent
-
+def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--smplx_file",
+        "-i",
+        "--smplx-file",
         help="SMPLX motion file to load.",
         type=str,
-        # required=True,
-        default="/home/yanjieze/projects/g1_wbc/GMR/motion_data/ACCAD/Male1General_c3d/General_A1_-_Stand_stageii.npz",
-        # default="/home/yanjieze/projects/g1_wbc/GMR/motion_data/ACCAD/Male2MartialArtsKicks_c3d/G8_-__roundhouse_left_stageii.npz"
-        # default="/home/yanjieze/projects/g1_wbc/TWIST-dev/motion_data/AMASS/KIT_572_dance_chacha11_stageii.npz"
-        # default="/home/yanjieze/projects/g1_wbc/GMR/motion_data/ACCAD/Male2MartialArtsPunches_c3d/E1_-__Jab_left_stageii.npz",
-        # default="/home/yanjieze/projects/g1_wbc/GMR/motion_data/ACCAD/Male1Running_c3d/Run_C24_-_quick_side_step_left_stageii.npz",
+        required=True,
     )
 
     parser.add_argument(
@@ -59,7 +46,8 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--save_path",
+        "-o",
+        "--save-path",
         type=path_expand,
         default=None,
         help="Path to save the robot motion. (DIRECTORY)",
@@ -73,28 +61,42 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--record_video",
+        "--record-video",
         default=False,
         action="store_true",
         help="Record the video.",
     )
 
     parser.add_argument(
-        "--video_quality",
+        "--video-quality",
         type=int,
-        default=480,
+        default=720,
         choices=[480, 720, 1080],
         help="Record video at one of the available resolutions.",
     )
 
     parser.add_argument(
-        "--rate_limit",
+        "--rate-limit",
         default=False,
         action="store_true",
         help="Limit the rate of the retargeted robot motion to keep the same as the human motion.",
     )
 
-    args = parser.parse_args()
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    from general_motion_retargeting import GeneralMotionRetargeting as GMR
+    from general_motion_retargeting import RobotMotionViewer
+    from general_motion_retargeting.utils.smpl import (
+        get_smplx_data_offline_fast,
+        load_smplx_file,
+    )
+
+    HERE = Path(__file__).parent
+
     save_path: Path | None = args.save_path
 
     if save_path is not None:
