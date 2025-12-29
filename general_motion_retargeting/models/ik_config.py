@@ -3,18 +3,8 @@ from typing import Annotated, Dict, List, Tuple
 from pydantic import BaseModel, model_validator
 
 Vec3 = Tuple[float, float, float]
-Quat = Tuple[float, float, float, float]
-
-
-IKParam = Annotated[
-    Tuple[
-        float,
-        float,
-        Vec3,
-        Quat,
-    ],
-    "IKParam: (pos_weight, rot_weight, pos_offset, rot_offset)",
-]
+Quat = Annotated[Tuple[float, float, float, float], "unit quaternion (w, x, y, z)"]
+IKParam = Annotated[Tuple[float, float], "IKParam: (pos_weight, rot_weight)"]
 
 
 class RetargetConfig(BaseModel):
@@ -39,6 +29,7 @@ class RetargetConfig(BaseModel):
 
     # ---------- IK 匹配 ----------
     ik_match_table: Dict[str, str]  # 机器人关节名 -> 人体关节名
+    robot_joint_offset: Dict[str, Tuple[Vec3, Quat]]  # 机器人关节名 -> (位置偏移, 旋转偏移)
 
     # ---------- IK 开关 ----------
     use_ik_match_table1: bool
@@ -66,6 +57,13 @@ class RetargetConfig(BaseModel):
                 raise ValueError(
                     f"ik_param2 contains keys not present in ik_match_table: " f"{sorted(missing_in_match)}"
                 )
+
+        robot_joint_offset_keys = set(self.robot_joint_offset.keys())
+        missing_in_match = robot_joint_offset_keys - ik_match_keys
+        if missing_in_match:
+            raise ValueError(
+                f"robot_joint_offset contains keys not present in ik_match_table: " f"{sorted(missing_in_match)}"
+            )
 
         human_scale_keys = set(self.human_scale_table.keys())
         ik_match_values = set(self.ik_match_table.values())

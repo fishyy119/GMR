@@ -26,7 +26,7 @@ ROBOT_XML_DICT = {
 
 IK_CONFIG_DICT = {
     # offline data
-    "smplx":{
+    "smplx": {
         "unitree_g1": IK_CONFIG_ROOT / "smplx_to_g1.json",
         "unitree_g1_with_hands": IK_CONFIG_ROOT / "smplx_to_g1.json",
         "unitree_h1": IK_CONFIG_ROOT / "smplx_to_h1.json",
@@ -44,7 +44,7 @@ IK_CONFIG_DICT = {
         "pnd_adam_lite": IK_CONFIG_ROOT / "smplx_to_adam.json",
         "tienkung": IK_CONFIG_ROOT / "smplx_to_tienkung.json",
     },
-    "bvh_lafan1":{
+    "bvh_lafan1": {
         "unitree_g1": IK_CONFIG_ROOT / "bvh_lafan1_to_g1.json",
         "unitree_g1_with_hands": IK_CONFIG_ROOT / "bvh_lafan1_to_g1.json",
         "booster_t1_29dof": IK_CONFIG_ROOT / "bvh_lafan1_to_t1_29dof.json",
@@ -53,18 +53,20 @@ IK_CONFIG_DICT = {
         "engineai_pm01": IK_CONFIG_ROOT / "bvh_lafan1_to_pm01.json",
         "pal_talos": IK_CONFIG_ROOT / "bvh_to_talos.json",
     },
-    "bvh_nokov":{
+    "bvh_nokov": {
         "unitree_g1": IK_CONFIG_ROOT / "bvh_nokov_to_g1.json",
     },
-    "fbx":{
+    "bvh_neuron": {
+        "unitree_g1": IK_CONFIG_ROOT / "bvh_neuron_to_g1.json",
+    },
+    "fbx": {
         "unitree_g1": IK_CONFIG_ROOT / "fbx_to_g1.json",
         "unitree_g1_with_hands": IK_CONFIG_ROOT / "fbx_to_g1.json",
     },
-    "fbx_offline":{
+    "fbx_offline": {
         "unitree_g1": IK_CONFIG_ROOT / "fbx_offline_to_g1.json",
     },
-    
-    "xrobot":{
+    "xrobot": {
         "unitree_g1": IK_CONFIG_ROOT / "xrobot_to_g1.json",
     },
 }

@@ -56,25 +56,11 @@
       "title": "Ik Match Table",
       "type": "object"
     },
-    "use_ik_match_table1": {
-      "title": "Use Ik Match Table1",
-      "type": "boolean"
-    },
-    "use_ik_match_table2": {
-      "title": "Use Ik Match Table2",
-      "type": "boolean"
-    },
-    "ik_param1": {
+    "robot_joint_offset": {
       "additionalProperties": {
-        "maxItems": 4,
-        "minItems": 4,
+        "maxItems": 2,
+        "minItems": 2,
         "prefixItems": [
-          {
-            "type": "number"
-          },
-          {
-            "type": "number"
-          },
           {
             "maxItems": 3,
             "minItems": 3,
@@ -113,54 +99,44 @@
         ],
         "type": "array"
       },
-      "title": "Ik Param1",
+      "title": "Robot Joint Offset",
       "type": "object"
     },
-    "ik_param2": {
+    "use_ik_match_table1": {
+      "title": "Use Ik Match Table1",
+      "type": "boolean"
+    },
+    "use_ik_match_table2": {
+      "title": "Use Ik Match Table2",
+      "type": "boolean"
+    },
+    "ik_param1": {
       "additionalProperties": {
-        "maxItems": 4,
-        "minItems": 4,
+        "maxItems": 2,
+        "minItems": 2,
         "prefixItems": [
           {
             "type": "number"
           },
           {
             "type": "number"
+          }
+        ],
+        "type": "array"
+      },
+      "title": "Ik Param1",
+      "type": "object"
+    },
+    "ik_param2": {
+      "additionalProperties": {
+        "maxItems": 2,
+        "minItems": 2,
+        "prefixItems": [
+          {
+            "type": "number"
           },
           {
-            "maxItems": 3,
-            "minItems": 3,
-            "prefixItems": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "number"
-              }
-            ],
-            "type": "array"
-          },
-          {
-            "maxItems": 4,
-            "minItems": 4,
-            "prefixItems": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "number"
-              }
-            ],
-            "type": "array"
+            "type": "number"
           }
         ],
         "type": "array"
@@ -181,6 +157,7 @@
     "lower_body_name_list",
     "human_scale_table",
     "ik_match_table",
+    "robot_joint_offset",
     "use_ik_match_table1",
     "use_ik_match_table2",
     "ik_param1",

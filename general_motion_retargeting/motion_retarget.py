@@ -73,6 +73,7 @@ class GeneralMotionRetargeting:
         self.upper_body_scale = ik_config.upper_body_scale
         self.lower_body_scale = ik_config.lower_body_scale
         self.ik_match_table = ik_config.ik_match_table
+        self.robot_joint_offset = ik_config.robot_joint_offset
 
         # adjust the human scale table
         for key in ik_config.human_scale_table.keys():
@@ -128,8 +129,9 @@ class GeneralMotionRetargeting:
         self.tasks2 = []
 
         for frame_name, entry in self.ik_param1.items():
-            pos_weight, rot_weight, pos_offset, rot_offset = entry
+            pos_weight, rot_weight = entry
             body_name = self.ik_match_table[frame_name]
+            pos_offset, rot_offset = self.robot_joint_offset[frame_name]
             if pos_weight != 0 or rot_weight != 0:
                 task = mink.FrameTask(
                     frame_name=frame_name,
@@ -145,8 +147,9 @@ class GeneralMotionRetargeting:
                 self.task_errors1[task] = []
 
         for frame_name, entry in self.ik_param2.items():
-            pos_weight, rot_weight, pos_offset, rot_offset = entry
+            pos_weight, rot_weight = entry
             body_name = self.ik_match_table[frame_name]
+            pos_offset, rot_offset = self.robot_joint_offset[frame_name]
             if pos_weight != 0 or rot_weight != 0:
                 task = mink.FrameTask(
                     frame_name=frame_name,
