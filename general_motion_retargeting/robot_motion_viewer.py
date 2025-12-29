@@ -46,8 +46,12 @@ def draw_frame(
     joint_name=None,
     orientation_correction=R.from_euler("xyz", [0, 0, 0]),
     pos_offset=np.array([0, 0, 0]),
+    is_robot_frame=False,
 ):
-    rgba_list = [[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]]
+    if is_robot_frame:
+        rgba_list = [[1, 0.5, 0, 1], [0, 1, 0.7, 1], [0, 0.5, 1, 1]]
+    else:
+        rgba_list = [[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]]
     for i in range(3):
         geom = v.user_scn.geoms[v.user_scn.ngeom]
         mj.mjv_initGeom(
@@ -184,6 +188,17 @@ class RobotMotionViewer:
             for name in robot_joints_to_show:
                 body_id = self.model.body(name).id
                 body_pos = self.data.xpos[body_id]
+                R_body = self.data.xmat[body_id].reshape(3, 3)
+
+                draw_frame(
+                    body_pos,
+                    R_body,
+                    self.viewer,
+                    human_point_scale,
+                    pos_offset=human_pos_offset,
+                    joint_name=name if show_human_body_name else None,
+                    is_robot_frame=True,
+                )
                 draw_point(body_pos, self.viewer, size=0.03, color=(1.0, 0.0, 0.0, 1.0))
 
         self.viewer.sync()

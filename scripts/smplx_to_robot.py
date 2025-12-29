@@ -13,13 +13,7 @@ def path_expand(s) -> Path:
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-i",
-        "--smplx-file",
-        help="SMPLX motion file to load.",
-        type=str,
-        required=True,
-    )
+    parser.add_argument("-i", "--smplx-file", help="SMPLX motion file to load.", type=str, required=True)
 
     parser.add_argument(
         "--robot",
@@ -46,26 +40,10 @@ def parse_args():
     )
 
     parser.add_argument(
-        "-o",
-        "--save-path",
-        type=path_expand,
-        default=None,
-        help="Path to save the robot motion. (DIRECTORY)",
+        "-o", "--save-path", type=path_expand, default=None, help="Path to save the robot motion. (DIRECTORY)"
     )
-
-    parser.add_argument(
-        "--loop",
-        default=False,
-        action="store_true",
-        help="Loop the motion.",
-    )
-
-    parser.add_argument(
-        "--record-video",
-        default=False,
-        action="store_true",
-        help="Record the video.",
-    )
+    parser.add_argument("--loop", default=False, action="store_true", help="Loop the motion.")
+    parser.add_argument("--record-video", default=False, action="store_true", help="Record the video.")
 
     parser.add_argument(
         "--video-quality",
@@ -169,7 +147,7 @@ if __name__ == "__main__":
             dof_pos=qpos[7:],
             human_motion_data=retarget.scaled_human_data,
             # human_motion_data=smplx_data,
-            human_pos_offset=np.array([0.0, 0.0, 0.0]),
+            human_pos_offset=np.array([-1.0, 0.0, 0.0]),
             show_human_body_name=False,
             rate_limit=args.rate_limit,
             show_ref_point=True,
