@@ -2,7 +2,7 @@
 # pyright: reportAttributeAccessIssue=false
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import imageio
 import mujoco as mj
@@ -19,46 +19,53 @@ from general_motion_retargeting import (
 )
 from general_motion_retargeting.utils.smpl import HumanData
 
+RGBA = Tuple[float, float, float, float]
 
-def draw_point(pos: np.ndarray, viewer, size: float = 0.02, color=(1.0, 0.0, 0.0, 1.0)):
-    scn = viewer.user_scn
-    if scn.ngeom >= scn.maxgeom:
-        return
 
+def draw_point(
+    pos: np.ndarray,
+    viewer: mjv.Handle,
+    size: float = 0.025,
+    color: RGBA = (1.0, 0.0, 0.0, 1.0),
+    offset=np.array([1, 0, 0]),
+):
+    scn: mj.MjvScene = viewer.user_scn
     geom = scn.geoms[scn.ngeom]
-    scn.ngeom += 1
 
     mj.mjv_initGeom(
         geom,
         type=mj.mjtGeom.mjGEOM_SPHERE,
         size=[size, size, size],
-        pos=pos + np.array([1, 0, 0]),
+        pos=pos + offset,
         mat=np.eye(3).flatten(),
         rgba=color,
     )
+    scn.ngeom += 1
 
 
 def draw_frame(
-    pos,
-    mat,
-    v,
-    size,
+    pos: np.ndarray,
+    mat: np.ndarray,
+    viewer: mjv.Handle,
+    size: float = 0.1,
     joint_name=None,
     orientation_correction=R.from_euler("xyz", [0, 0, 0]),
-    pos_offset=np.array([0, 0, 0]),
+    offset=np.array([-1, 0, 0]),
     is_robot_frame=False,
 ):
     if is_robot_frame:
         rgba_list = [[1, 0.5, 0, 1], [0, 1, 0.7, 1], [0, 0.5, 1, 1]]
     else:
         rgba_list = [[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]]
+
+    scn: mj.MjvScene = viewer.user_scn
     for i in range(3):
-        geom = v.user_scn.geoms[v.user_scn.ngeom]
+        geom = scn.geoms[scn.ngeom]
         mj.mjv_initGeom(
             geom,
             type=mj.mjtGeom.mjGEOM_ARROW,
             size=[0.01, 0.01, 0.01],
-            pos=pos + pos_offset,
+            pos=pos + offset,
             mat=mat.flatten(),
             rgba=rgba_list[i],
         )
@@ -66,13 +73,13 @@ def draw_frame(
             geom.label = joint_name  # 这里赋名字
         fix = orientation_correction.as_matrix()
         mj.mjv_connector(
-            v.user_scn.geoms[v.user_scn.ngeom],
+            scn.geoms[scn.ngeom],
             type=mj.mjtGeom.mjGEOM_ARROW,
             width=0.005,
-            from_=pos + pos_offset,
-            to=pos + pos_offset + size * (mat @ fix)[:, i],
+            from_=pos + offset,
+            to=pos + offset + size * (mat @ fix)[:, i],
         )
-        v.user_scn.ngeom += 1
+        scn.ngeom += 1
 
 
 class RobotMotionViewer:
@@ -129,17 +136,17 @@ class RobotMotionViewer:
         root_pos,
         root_rot,
         dof_pos,
-        # human data
-        human_motion_data: HumanData | None = None,
-        show_human_body_name=False,
-        # scale for human point visualization
-        human_point_scale=0.1,
-        # human pos offset add for visualization
-        human_pos_offset=np.array([0.0, 0.0, 0.0]),
-        # rate limit
+        # visualization options
         rate_limit=True,
         follow_camera=True,
+        # some refrence visualization
         show_ref_point=False,
+        show_ref_frame=False,
+        point_size=0.03,
+        frame_size=0.1,
+        point_offset=np.array([1.2, 0.0, 0.0]),
+        frame_offset=np.array([-1.2, 0.0, 0.0]),
+        human_motion_data: HumanData | None = None,
         robot_joints_to_show: List[str] | None = None,
     ):
         """
@@ -158,48 +165,56 @@ class RobotMotionViewer:
 
         mj.mj_forward(self.model, self.data)
 
-        if follow_camera or self.is_first_step:
-            self.viewer.cam.lookat = self.data.xpos[self.model.body(self.robot_base).id] + (
-                np.array([0.5, 0, 0]) if show_ref_point else np.zeros(3)
-            )
+        point_offset = point_offset if show_ref_point else np.zeros(3)
+        frame_offset = frame_offset if show_ref_frame else np.zeros(3)
+        need_look = self.data.xpos[self.model.body(self.robot_base).id] + (point_offset + frame_offset) / 2
+
+        if follow_camera:
+            self.viewer.cam.lookat = need_look
+
+        if self.is_first_step:
+            self.viewer.cam.lookat = need_look
             self.viewer.cam.distance = self.viewer_cam_distance
             self.viewer.cam.elevation = -10  # 正面视角，轻微向下看
             # self.viewer.cam.azimuth = 60  # 正面朝向机器人
 
             self.is_first_step = False
 
-        if human_motion_data is not None:
-            # Clean custom geometry
-            self.viewer.user_scn.ngeom = 0  # type: ignore
-            # Draw the task targets for reference
-            for human_body_name, (pos, rot) in human_motion_data.items():
-                draw_frame(
-                    pos,
-                    R.from_quat(rot, scalar_first=True).as_matrix(),
-                    self.viewer,
-                    human_point_scale,
-                    pos_offset=human_pos_offset,
-                    joint_name=human_body_name if show_human_body_name else None,
-                )
-                if show_ref_point:
-                    draw_point(pos, self.viewer, size=0.03, color=(0.0, 1.0, 0.0, 1.0))
+        # Clean custom geometry
+        self.viewer.user_scn.ngeom = 0  # type: ignore
 
-        if show_ref_point and robot_joints_to_show is not None:
+        if human_motion_data is not None:
+            for human_body_name, (pos, rot) in human_motion_data.items():
+                if show_ref_frame:
+                    draw_frame(
+                        pos,
+                        R.from_quat(rot, scalar_first=True).as_matrix(),
+                        self.viewer,
+                        frame_size,
+                        offset=frame_offset,
+                        joint_name=None,
+                    )
+                if show_ref_point:
+                    draw_point(pos, self.viewer, size=point_size, offset=point_offset, color=(0.0, 1.0, 0.0, 1.0))
+
+        if robot_joints_to_show is not None:
             for name in robot_joints_to_show:
                 body_id = self.model.body(name).id
                 body_pos = self.data.xpos[body_id]
                 R_body = self.data.xmat[body_id].reshape(3, 3)
 
-                draw_frame(
-                    body_pos,
-                    R_body,
-                    self.viewer,
-                    human_point_scale,
-                    pos_offset=human_pos_offset,
-                    joint_name=name if show_human_body_name else None,
-                    is_robot_frame=True,
-                )
-                draw_point(body_pos, self.viewer, size=0.03, color=(1.0, 0.0, 0.0, 1.0))
+                if show_ref_frame:
+                    draw_frame(
+                        body_pos,
+                        R_body,
+                        self.viewer,
+                        frame_size,
+                        offset=frame_offset,
+                        joint_name=None,
+                        is_robot_frame=True,
+                    )
+                if show_ref_point:
+                    draw_point(body_pos, self.viewer, size=point_size, offset=point_offset, color=(1.0, 0.0, 0.0, 1.0))
 
         self.viewer.sync()
         if rate_limit is True:

@@ -5,33 +5,38 @@ import time
 
 import numpy as np
 from rich import print
-from tqdm import tqdm
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--bvh_file", help="BVH motion file to load.", required=True, type=str)
-    parser.add_argument("--format", choices=["lafan1", "nokov", "neuron"], default="neuron")
-    parser.add_argument("--loop", default=False, action="store_true", help="Loop the motion.")
+    parser.add_argument("-o", "--save_path", default=None, help="Path to save the robot motion.")
 
+    parser.add_argument("--format", choices=["lafan1", "nokov", "neuron"], default="neuron")
     parser.add_argument(
         "--robot",
         choices=[
             "unitree_g1",
             "unitree_g1_with_hands",
-            "booster_t1",
-            "stanford_toddy",
-            "fourier_n1",
-            "engineai_pm01",
-            "pal_talos",
         ],
         default="unitree_g1",
     )
+    parser.add_argument(
+        "--video-quality", type=int, default=720, choices=[480, 720, 1080], help="Available video resolutions."
+    )
 
-    parser.add_argument("--record_video", action="store_true", default=False)
-    parser.add_argument("--video_path", type=str, default="videos/example.mp4")
-    parser.add_argument("--rate_limit", action="store_true", default=False)
-    parser.add_argument("--save_path", default=None, help="Path to save the robot motion.")
+    parser.add_argument("--loop", default=False, action="store_true", help="Loop the motion.")
+    parser.add_argument("--record-video", default=False, action="store_true", help="Record the video.")
+    parser.add_argument("--point", default=False, action="store_true", help="Show reference points.")
+    parser.add_argument("--frame", default=False, action="store_true", help="Show reference frames.")
+    parser.add_argument("--follow", default=False, action="store_true", help="Camera follow the robot.")
+    parser.add_argument(
+        "--rate-limit",
+        default=False,
+        action="store_true",
+        help="Limit the rate of the retargeted robot motion to keep the same as the human motion.",
+    )
+
     parser.add_argument("--motion_fps", default=30, type=int)
 
     return parser.parse_args()
@@ -69,9 +74,9 @@ if __name__ == "__main__":
         motion_fps=motion_fps,
         transparent_robot=0,
         record_video=args.record_video,
-        video_path=args.video_path,
-        # video_width=2080,
-        # video_height=1170
+        video_path=HERE.parent / f"videos/{args.robot}_{args.bvh_file.split('/')[-1].split('.')[0]}.mp4",
+        video_width=args.video_quality * 16 // 9,
+        video_height=args.video_quality,
     )
 
     # FPS measurement variables
@@ -81,54 +86,56 @@ if __name__ == "__main__":
 
     print(f"mocap_frame_rate: {motion_fps}")
 
-    # Create tqdm progress bar for the total number of frames
-    # pbar = tqdm(total=len(lafan1_data_frames), desc="Retargeting")
-
     # Start the viewer
     i = 0
 
-    while True:
+    try:
+        while True:
+            # FPS measurement
+            fps_counter += 1
+            current_time = time.time()
+            if current_time - fps_start_time >= fps_display_interval:
+                actual_fps = fps_counter / (current_time - fps_start_time)
+                print(f"Actual rendering FPS: {actual_fps:.2f}")
+                fps_counter = 0
+                fps_start_time = current_time
 
-        # FPS measurement
-        fps_counter += 1
-        current_time = time.time()
-        if current_time - fps_start_time >= fps_display_interval:
-            actual_fps = fps_counter / (current_time - fps_start_time)
-            print(f"Actual rendering FPS: {actual_fps:.2f}")
-            fps_counter = 0
-            fps_start_time = current_time
+            # Update progress bar
+            # pbar.update(1)
 
-        # Update progress bar
-        # pbar.update(1)
+            # Update task targets.
+            smplx_data = lafan1_data_frames[i]
 
-        # Update task targets.
-        smplx_data = lafan1_data_frames[i]
+            # retarget
+            qpos = retargeter.retarget(smplx_data)
 
-        # retarget
-        qpos = retargeter.retarget(smplx_data)
+            # visualize
+            robot_motion_viewer.step(
+                root_pos=qpos[:3],
+                root_rot=qpos[3:7],
+                dof_pos=qpos[7:],
+                # follow_camera=False,
+                rate_limit=args.rate_limit,
+                follow_camera=args.follow,
+                show_ref_point=args.point,
+                show_ref_frame=args.frame,
+                human_motion_data=retargeter.scaled_human_data,
+                robot_joints_to_show=list(retargeter.ik_match_table.keys()),
+            )
 
-        # visualize
-        robot_motion_viewer.step(
-            root_pos=qpos[:3],
-            root_rot=qpos[3:7],
-            dof_pos=qpos[7:],
-            human_motion_data=retargeter.scaled_human_data,
-            rate_limit=args.rate_limit,
-            follow_camera=False,
-            show_ref_point=True,
-            robot_joints_to_show=list(retargeter.ik_match_table.keys()),
-            # human_pos_offset=np.array([0.0, 0.0, 0.0])
-        )
+            if args.loop:
+                i = (i + 1) % len(lafan1_data_frames)
+            else:
+                i += 1
+                if i >= len(lafan1_data_frames):
+                    break
 
-        if args.loop:
-            i = (i + 1) % len(lafan1_data_frames)
-        else:
-            i += 1
-            if i >= len(lafan1_data_frames):
-                break
-
-        if args.save_path is not None:
-            qpos_list.append(qpos)
+            if args.save_path is not None:
+                qpos_list.append(qpos)
+    except KeyboardInterrupt:
+        print("Exiting...")
+    finally:
+        robot_motion_viewer.close()
 
     if args.save_path is not None:
         import pickle
@@ -151,8 +158,3 @@ if __name__ == "__main__":
         with open(args.save_path, "wb") as f:
             pickle.dump(motion_data, f)
         print(f"Saved to {args.save_path}")
-
-    # Close progress bar
-    # pbar.close()
-
-    robot_motion_viewer.close()

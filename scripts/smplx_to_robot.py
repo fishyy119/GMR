@@ -14,45 +14,27 @@ def path_expand(s) -> Path:
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--smplx-file", help="SMPLX motion file to load.", type=str, required=True)
+    parser.add_argument(
+        "-o", "--save-path", type=path_expand, default=None, help="Path to save the robot motion. (DIRECTORY)"
+    )
 
     parser.add_argument(
         "--robot",
         choices=[
             "unitree_g1",
             "unitree_g1_with_hands",
-            "unitree_h1",
-            "unitree_h1_2",
-            "booster_t1",
-            "booster_t1_29dof",
-            "stanford_toddy",
-            "fourier_n1",
-            "engineai_pm01",
-            "kuavo_s45",
-            "hightorque_hi",
-            "galaxea_r1pro",
-            "berkeley_humanoid_lite",
-            "booster_k1",
-            "pnd_adam_lite",
-            "openloong",
-            "tienkung",
         ],
         default="unitree_g1",
     )
-
     parser.add_argument(
-        "-o", "--save-path", type=path_expand, default=None, help="Path to save the robot motion. (DIRECTORY)"
+        "--video-quality", type=int, default=720, choices=[480, 720, 1080], help="Available video resolutions."
     )
+
     parser.add_argument("--loop", default=False, action="store_true", help="Loop the motion.")
     parser.add_argument("--record-video", default=False, action="store_true", help="Record the video.")
-
-    parser.add_argument(
-        "--video-quality",
-        type=int,
-        default=720,
-        choices=[480, 720, 1080],
-        help="Record video at one of the available resolutions.",
-    )
-
+    parser.add_argument("--point", default=False, action="store_true", help="Show reference points.")
+    parser.add_argument("--frame", default=False, action="store_true", help="Show reference frames.")
+    parser.add_argument("--follow", default=False, action="store_true", help="Camera follow the robot.")
     parser.add_argument(
         "--rate-limit",
         default=False,
@@ -117,45 +99,49 @@ if __name__ == "__main__":
     # Start the viewer
     i = 0
 
-    while True:
-        if args.loop:
-            i = (i + 1) % len(smplx_data_frames)
-        else:
-            i += 1
-            if i >= len(smplx_data_frames):
-                break
+    try:
+        while True:
+            if args.loop:
+                i = (i + 1) % len(smplx_data_frames)
+            else:
+                i += 1
+                if i >= len(smplx_data_frames):
+                    break
 
-        # FPS measurement
-        fps_counter += 1
-        current_time = time.time()
-        if current_time - fps_start_time >= fps_display_interval:
-            actual_fps = fps_counter / (current_time - fps_start_time)
-            print(f"Actual rendering FPS: {actual_fps:.2f}")
-            fps_counter = 0
-            fps_start_time = current_time
+            # FPS measurement
+            fps_counter += 1
+            current_time = time.time()
+            if current_time - fps_start_time >= fps_display_interval:
+                actual_fps = fps_counter / (current_time - fps_start_time)
+                print(f"Actual rendering FPS: {actual_fps:.2f}")
+                fps_counter = 0
+                fps_start_time = current_time
 
-        # Update task targets.
-        smplx_data = smplx_data_frames[i]
+            # Update task targets.
+            smplx_data = smplx_data_frames[i]
 
-        # retarget
-        qpos = retarget.retarget(smplx_data)
+            # retarget
+            qpos = retarget.retarget(smplx_data)
 
-        # visualize
-        robot_motion_viewer.step(
-            root_pos=qpos[:3],
-            root_rot=qpos[3:7],
-            dof_pos=qpos[7:],
-            human_motion_data=retarget.scaled_human_data,
-            # human_motion_data=smplx_data,
-            human_pos_offset=np.array([-1.0, 0.0, 0.0]),
-            show_human_body_name=False,
-            rate_limit=args.rate_limit,
-            show_ref_point=True,
-            follow_camera=False,
-            robot_joints_to_show=list(retarget.ik_match_table.keys()),
-        )
-        if save_path is not None:
-            qpos_list.append(qpos)
+            # visualize
+            robot_motion_viewer.step(
+                root_pos=qpos[:3],
+                root_rot=qpos[3:7],
+                dof_pos=qpos[7:],
+                # human_motion_data=smplx_data,
+                rate_limit=args.rate_limit,
+                follow_camera=args.follow,
+                show_ref_point=args.point,
+                show_ref_frame=args.frame,
+                human_motion_data=retarget.scaled_human_data,
+                robot_joints_to_show=list(retarget.ik_match_table.keys()),
+            )
+            if save_path is not None:
+                qpos_list.append(qpos)
+    except KeyboardInterrupt:
+        print("Exiting...")
+    finally:
+        robot_motion_viewer.close()
 
     if save_path is not None:
         import pickle
@@ -178,5 +164,3 @@ if __name__ == "__main__":
         with open(save_path, "wb") as f:
             pickle.dump(motion_data, f)
         print(f"Saved to {save_path}")
-
-    robot_motion_viewer.close()

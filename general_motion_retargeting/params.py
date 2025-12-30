@@ -93,8 +93,8 @@ ROBOT_BASE_DICT = {
 }
 
 VIEWER_CAM_DISTANCE_DICT = {
-    "unitree_g1": 2.0,
-    "unitree_g1_with_hands": 2.0,
+    "unitree_g1": 2.2,
+    "unitree_g1_with_hands": 2.2,
     "unitree_h1": 3.0,
     "unitree_h1_2": 3.0,
     "booster_t1": 2.0,
