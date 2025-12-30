@@ -97,6 +97,7 @@ class RobotMotionViewer:
         keyboard_callback=None,
     ):
         self.is_first_step = True
+        self.previous_lookat = np.zeros(3)
 
         self.robot_type = robot_type
         self.xml_path = ROBOT_XML_DICT[robot_type]
@@ -167,10 +168,7 @@ class RobotMotionViewer:
 
         point_offset = point_offset if show_ref_point else np.zeros(3)
         frame_offset = frame_offset if show_ref_frame else np.zeros(3)
-        need_look = self.data.xpos[self.model.body(self.robot_base).id] + (point_offset + frame_offset) / 2
-
-        if follow_camera:
-            self.viewer.cam.lookat = need_look
+        need_look: np.ndarray = self.data.xpos[self.model.body(self.robot_base).id] + (point_offset + frame_offset) / 2
 
         if self.is_first_step:
             self.viewer.cam.lookat = need_look
@@ -179,6 +177,24 @@ class RobotMotionViewer:
             # self.viewer.cam.azimuth = 60  # 正面朝向机器人
 
             self.is_first_step = False
+            self.previous_lookat = need_look
+        else:
+            if follow_camera:
+                # ln 表：
+                # 0.9 = -0.1
+                # 0.8 = -0.22
+                # 0.7 = -0.36
+                # 0.6 = -0.51
+                # 0.5 = -0.7
+                # 0.4 = -0.9
+                # 0.3 = -1.2
+                # 0.2 = -1.6
+                # 0.1 = -2.3
+                # 指数系数绝对值越大，平滑越弱
+                alpha = np.exp(-2.0 * np.abs(need_look - self.previous_lookat))
+                smoothed_lookat = (1 - alpha) * need_look + alpha * self.previous_lookat
+                self.viewer.cam.lookat = smoothed_lookat
+                self.previous_lookat = smoothed_lookat.copy()
 
         # Clean custom geometry
         self.viewer.user_scn.ngeom = 0  # type: ignore
