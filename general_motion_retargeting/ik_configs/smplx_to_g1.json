@@ -6,7 +6,7 @@
     "human_height_assumption": 1.8,
     "use_ik_match_table1": true,
     "use_ik_match_table2": true,
-    "upper_body_scale": 0.8,
+    "upper_body_scale": 0.79,
     "lower_body_scale": 0.9,
     "human_scale_table": {
         "pelvis": 0.9,
@@ -50,7 +50,7 @@
         "right_hip_roll_link": "right_hip",
         "right_knee_link": "right_knee",
         "right_toe_link": "right_foot",
-        "torso_link": "spine1",
+        "torso_link": "spine3",
         "left_shoulder_yaw_link": "left_shoulder",
         "left_elbow_link": "left_elbow",
         "left_wrist_yaw_link": "left_wrist",
@@ -100,7 +100,7 @@
             10
         ],
         "left_wrist_yaw_link": [
-            0,
+            100,
             10
         ],
         "right_shoulder_yaw_link": [
@@ -112,7 +112,7 @@
             10
         ],
         "right_wrist_yaw_link": [
-            0,
+            100,
             10
         ]
     },
@@ -158,7 +158,7 @@
             5
         ],
         "left_wrist_yaw_link": [
-            10,
+            100,
             5
         ],
         "right_shoulder_yaw_link": [
@@ -170,7 +170,7 @@
             5
         ],
         "right_wrist_yaw_link": [
-            10,
+            100,
             5
         ]
     },
