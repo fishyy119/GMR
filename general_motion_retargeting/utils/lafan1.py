@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
@@ -5,7 +7,7 @@ import general_motion_retargeting.utils.lafan_vendor.utils as utils
 from general_motion_retargeting.utils.lafan_vendor.extract import read_bvh
 
 
-def load_bvh_file(bvh_file, format="lafan1"):
+def load_bvh_file(bvh_file: Path, format="lafan1"):
     """
     Must return a dictionary with the following structure:
     {
@@ -14,7 +16,13 @@ def load_bvh_file(bvh_file, format="lafan1"):
         ...
     }
     """
-    data = read_bvh(bvh_file)
+    tmp_path = bvh_file.with_name("_tmp.bvh")
+    with open(bvh_file, "r", encoding="utf-8") as src, open(tmp_path, "w", encoding="utf-8") as dst:
+        for line in src:
+            if line.strip():  # 去除空行
+                dst.write(line)
+
+    data = read_bvh(tmp_path)
     global_data = utils.quat_fk(data.quats, data.pos, data.parents)
 
     rotation_matrix = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])

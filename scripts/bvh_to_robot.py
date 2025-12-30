@@ -1,7 +1,7 @@
 import argparse
 import os
-import pathlib
 import time
+from pathlib import Path
 
 import numpy as np
 from rich import print
@@ -9,7 +9,7 @@ from rich import print
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--bvh_file", help="BVH motion file to load.", required=True, type=str)
+    parser.add_argument("-i", "--bvh_file", help="BVH motion file to load.", required=True, type=Path)
     parser.add_argument("-o", "--save_path", default=None, help="Path to save the robot motion.")
 
     parser.add_argument("--format", choices=["lafan1", "nokov", "neuron"], default="neuron")
@@ -43,7 +43,7 @@ def parse_args():
 
 
 if __name__ == "__main__":
-    HERE = pathlib.Path(__file__).parent
+    HERE = Path(__file__).parent
     args = parse_args()
 
     from general_motion_retargeting import GeneralMotionRetargeting as GMR
@@ -58,7 +58,8 @@ if __name__ == "__main__":
     qpos_list = []
 
     # Load SMPLX trajectory
-    lafan1_data_frames, actual_human_height = load_bvh_file(args.bvh_file, format=args.format)
+    bvh_file: Path = args.bvh_file
+    lafan1_data_frames, actual_human_height = load_bvh_file(bvh_file, format=args.format)
 
     # Initialize the retargeting system
     retargeter = GMR(
@@ -74,7 +75,7 @@ if __name__ == "__main__":
         motion_fps=motion_fps,
         transparent_robot=0,
         record_video=args.record_video,
-        video_path=HERE.parent / f"videos/{args.robot}_{args.bvh_file.split('/')[-1].split('.')[0]}.mp4",
+        video_path=HERE.parent / f"videos/{args.robot}_{bvh_file.stem}.mp4",
         video_width=args.video_quality * 16 // 9,
         video_height=args.video_quality,
     )
