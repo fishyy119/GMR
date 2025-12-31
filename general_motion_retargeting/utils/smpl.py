@@ -1,13 +1,17 @@
-from typing import Any, Dict, List, Tuple
+# pyright: reportOptionalMemberAccess=false
+from typing import Dict, List, Tuple, cast
 
 import numpy as np
 import smplx
 import torch
 from scipy.interpolate import interp1d
 from scipy.spatial.transform import Rotation as R
+from smplx.body_models import SMPLX
 from smplx.joint_names import JOINT_NAMES
+from smplx.utils import SMPLXOutput
 
-import general_motion_retargeting.utils.lafan_vendor.utils as utils
+from ..models.basic_typing import HumanData
+from .lafan_vendor.utils import quat_mul
 
 
 def load_smpl_file(smpl_file):
@@ -15,7 +19,7 @@ def load_smpl_file(smpl_file):
     return smpl_data
 
 
-def load_smplx_file(smplx_file, smplx_body_model_path) -> Tuple[Any, Any, Any, float]:
+def load_smplx_file(smplx_file, smplx_body_model_path) -> Tuple[Dict, SMPLX, SMPLXOutput, float]:
     """
     - 原始npz数据
     - 身体模型（唯一变量gender）
@@ -35,7 +39,7 @@ def load_smplx_file(smplx_file, smplx_body_model_path) -> Tuple[Any, Any, Any, f
     # print(smplx_data["trans"].shape)
 
     num_frames = smplx_data["pose_body"].shape[0]
-    smplx_output = body_model(
+    smplx_output: SMPLXOutput = body_model(
         betas=torch.tensor(smplx_data["betas"]).float().view(1, -1),  # (16,)
         global_orient=torch.tensor(smplx_data["root_orient"]).float(),  # (N, 3)
         body_pose=torch.tensor(smplx_data["pose_body"]).float(),  # (N, 63)
@@ -55,7 +59,7 @@ def load_smplx_file(smplx_file, smplx_body_model_path) -> Tuple[Any, Any, Any, f
     else:
         human_height = 1.66 + 0.1 * smplx_data["betas"][0, 0]
 
-    return smplx_data, body_model, smplx_output, human_height
+    return smplx_data, cast(SMPLX, body_model), smplx_output, human_height
 
 
 def load_gvhmr_pred_file(gvhmr_pred_file, smplx_body_model_path):
@@ -176,10 +180,9 @@ def slerp(rot1, rot2, t):
     return R.from_quat(q)
 
 
-HumanData = Dict[str, Tuple[np.ndarray, np.ndarray]]
-
-
-def get_smplx_data_offline_fast(smplx_data, body_model, smplx_output, tgt_fps=30) -> Tuple[List[HumanData], int]:
+def get_smplx_data_offline_fast(
+    smplx_data: Dict, body_model: SMPLX, smplx_output: SMPLXOutput, tgt_fps=30
+) -> Tuple[List[HumanData], int]:
     """
     Must return a dictionary with the following structure:
     {
@@ -194,8 +197,8 @@ def get_smplx_data_offline_fast(smplx_data, body_model, smplx_output, tgt_fps=30
     global_orient = smplx_output.global_orient.squeeze()
     full_body_pose = smplx_output.full_pose.reshape(num_frames, -1, 3)
     joints = smplx_output.joints.detach().numpy().squeeze()
-    joint_names = JOINT_NAMES[: len(body_model.parents)]
-    parents = body_model.parents
+    parents = cast(list, body_model.parents)
+    joint_names = JOINT_NAMES[: len(parents)]
 
     if tgt_fps < src_fps:
         # perform fps alignment with proper interpolation
@@ -249,13 +252,13 @@ def get_smplx_data_offline_fast(smplx_data, body_model, smplx_output, tgt_fps=30
         aligned_fps = tgt_fps
 
     smplx_data_frames = []
-    for curr_frame in range(len(global_orient)):
+    for curr_frame in range(len(global_orient)):  # 每帧
         result = {}
         single_global_orient = global_orient[curr_frame]
         single_full_body_pose = full_body_pose[curr_frame]
         single_joints = joints[curr_frame]
         joint_orientations = []
-        for i, joint_name in enumerate(joint_names):
+        for i, joint_name in enumerate(joint_names):  # 累积每个关节的相对旋转，最终输出全局旋转
             if i == 0:
                 rot = R.from_rotvec(single_global_orient)
             else:
@@ -359,7 +362,7 @@ def get_gvhmr_data_offline_fast(smplx_data, body_model, smplx_output, tgt_fps=30
     rotation_quat = R.from_matrix(rotation_matrix).as_quat(scalar_first=True)
     for result in smplx_data_frames:
         for joint_name in result.keys():
-            orientation = utils.quat_mul(rotation_quat, result[joint_name][1])
+            orientation = quat_mul(rotation_quat, result[joint_name][1])
             position = result[joint_name][0] @ rotation_matrix.T
             result[joint_name] = (position, orientation)
 

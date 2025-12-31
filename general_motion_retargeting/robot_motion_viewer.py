@@ -12,12 +12,8 @@ from loop_rate_limiters import RateLimiter
 from rich import print
 from scipy.spatial.transform import Rotation as R
 
-from general_motion_retargeting import (
-    ROBOT_BASE_DICT,
-    ROBOT_XML_DICT,
-    VIEWER_CAM_DISTANCE_DICT,
-)
-from general_motion_retargeting.utils.smpl import HumanData
+from .models.basic_typing import HumanData
+from .params import ROBOT_BASE_DICT, ROBOT_XML_DICT, VIEWER_CAM_DISTANCE_DICT
 
 RGBA = Tuple[float, float, float, float]
 

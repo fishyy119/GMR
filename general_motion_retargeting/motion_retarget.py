@@ -6,9 +6,9 @@ import numpy as np
 from rich import print
 from scipy.spatial.transform import Rotation as R
 
+from .models.basic_typing import HumanData
 from .models.ik_config import RetargetConfig
 from .params import IK_CONFIG_DICT, ROBOT_XML_DICT
-from .utils.smpl import HumanData
 
 
 class GeneralMotionRetargeting:
@@ -102,10 +102,8 @@ class GeneralMotionRetargeting:
 
         self.human_body_to_task1 = {}
         self.human_body_to_task2 = {}
-        self.pos_offsets1 = {}
-        self.rot_offsets1 = {}
-        self.pos_offsets2 = {}
-        self.rot_offsets2 = {}
+        self.pos_offsets = {}
+        self.rot_offsets = {}
 
         self.task_errors1 = {}
         self.task_errors2 = {}
@@ -128,10 +126,16 @@ class GeneralMotionRetargeting:
         self.tasks1 = []
         self.tasks2 = []
 
+        for frame_name, entry in self.robot_joint_offset.items():
+            pos_offset, rot_offset = entry
+            body_name = self.ik_match_table[frame_name]
+
+            self.pos_offsets[body_name] = np.array(pos_offset) - self.ground
+            self.rot_offsets[body_name] = R.from_quat(rot_offset, scalar_first=True)
+
         for frame_name, entry in self.ik_param1.items():
             pos_weight, rot_weight = entry
             body_name = self.ik_match_table[frame_name]
-            pos_offset, rot_offset = self.robot_joint_offset[frame_name]
             if pos_weight != 0 or rot_weight != 0:
                 task = mink.FrameTask(
                     frame_name=frame_name,
@@ -141,15 +145,12 @@ class GeneralMotionRetargeting:
                     lm_damping=1,
                 )
                 self.human_body_to_task1[body_name] = task
-                self.pos_offsets1[body_name] = np.array(pos_offset) - self.ground
-                self.rot_offsets1[body_name] = R.from_quat(rot_offset, scalar_first=True)
                 self.tasks1.append(task)
                 self.task_errors1[task] = []
 
         for frame_name, entry in self.ik_param2.items():
             pos_weight, rot_weight = entry
             body_name = self.ik_match_table[frame_name]
-            pos_offset, rot_offset = self.robot_joint_offset[frame_name]
             if pos_weight != 0 or rot_weight != 0:
                 task = mink.FrameTask(
                     frame_name=frame_name,
@@ -159,8 +160,6 @@ class GeneralMotionRetargeting:
                     lm_damping=1,
                 )
                 self.human_body_to_task2[body_name] = task
-                self.pos_offsets2[body_name] = np.array(pos_offset) - self.ground
-                self.rot_offsets2[body_name] = R.from_quat(rot_offset, scalar_first=True)
                 self.tasks2.append(task)
                 self.task_errors2[task] = []
 
@@ -168,7 +167,7 @@ class GeneralMotionRetargeting:
         # scale human data in local frame
         human_data = self.to_numpy(human_data)
         human_data = self.scale_human_data(human_data)
-        human_data = self.offset_human_data(human_data, self.pos_offsets1, self.rot_offsets1)
+        human_data = self.offset_human_data(human_data)
         human_data = self.apply_ground_offset(human_data)
         if offset_to_ground:
             human_data = self.offset_human_data_to_ground(human_data)
@@ -235,12 +234,12 @@ class GeneralMotionRetargeting:
     def error2(self):
         return np.linalg.norm(np.concatenate([task.compute_error(self.configuration) for task in self.tasks2]))
 
-    def to_numpy(self, human_data):
+    def to_numpy(self, human_data: HumanData) -> HumanData:
         for body_name in human_data.keys():
-            human_data[body_name] = [np.asarray(human_data[body_name][0]), np.asarray(human_data[body_name][1])]
+            human_data[body_name] = (np.asarray(human_data[body_name][0]), np.asarray(human_data[body_name][1]))
         return human_data
 
-    def scale_human_data(self, human_data: HumanData):
+    def scale_human_data(self, human_data: HumanData) -> HumanData:
         """
         * 论文里的步骤3：非均匀局部缩放（前面的系数还有一个缩放在__init__中）
         """
@@ -295,25 +294,25 @@ class GeneralMotionRetargeting:
 
         return human_data_global
 
-    def offset_human_data(self, human_data, pos_offsets, rot_offsets):
+    def offset_human_data(self, human_data: HumanData) -> HumanData:
         """the pos offsets are applied in the local frame"""
-        offset_human_data = {}
+        pos_offsets = self.pos_offsets
+        rot_offsets = self.rot_offsets
+        offset_human_data: HumanData = {}
         for body_name in human_data.keys():
             pos, quat = human_data[body_name]
-            offset_human_data[body_name] = [pos, quat]
             # apply rotation offset first
             updated_quat = (R.from_quat(quat, scalar_first=True) * rot_offsets[body_name]).as_quat(scalar_first=True)
-            offset_human_data[body_name][1] = updated_quat
 
             local_offset = pos_offsets[body_name]
             # compute the global position offset using the updated rotation
             global_pos_offset = R.from_quat(updated_quat, scalar_first=True).apply(local_offset)
 
-            offset_human_data[body_name][0] = pos + global_pos_offset
+            offset_human_data[body_name] = (pos + global_pos_offset, updated_quat)
 
         return offset_human_data
 
-    def offset_human_data_to_ground(self, human_data):
+    def offset_human_data_to_ground(self, human_data: HumanData) -> HumanData:
         """find the lowest point of the human data and offset the human data to the ground"""
         offset_human_data = {}
         ground_offset = 0.1
@@ -336,8 +335,8 @@ class GeneralMotionRetargeting:
     def set_ground_offset(self, ground_offset):
         self.ground_offset = ground_offset
 
-    def apply_ground_offset(self, human_data):
+    def apply_ground_offset(self, human_data: HumanData) -> HumanData:
         for body_name in human_data.keys():
             pos, quat = human_data[body_name]
-            human_data[body_name][0] = pos - np.array([0, 0, self.ground_offset])
+            human_data[body_name] = (pos - np.array([0, 0, self.ground_offset]), quat)
         return human_data

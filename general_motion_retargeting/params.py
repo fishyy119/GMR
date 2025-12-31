@@ -28,6 +28,7 @@ IK_CONFIG_DICT = {
     # offline data
     "smplx": {
         "unitree_g1": IK_CONFIG_ROOT / "smplx_to_g1.json",
+        # "unitree_g1": IK_CONFIG_ROOT / "smplx_to_g1_zero_offset.json",  # 用于测试smpl零位姿态
         "unitree_g1_with_hands": IK_CONFIG_ROOT / "smplx_to_g1.json",
         "unitree_h1": IK_CONFIG_ROOT / "smplx_to_h1.json",
         "unitree_h1_2": IK_CONFIG_ROOT / "smplx_to_h1_2.json",
