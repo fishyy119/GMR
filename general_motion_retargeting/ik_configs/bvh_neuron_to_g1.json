@@ -49,7 +49,7 @@
         "right_hip_yaw_link": "RightUpLeg",
         "right_knee_link": "RightLeg",
         "right_ankle_roll_link": "RightFootMod",
-        "torso_link": "Spine",
+        "torso_link": "Spine2",
         "left_shoulder_yaw_link": "LeftArm",
         "left_elbow_link": "LeftForeArm",
         "left_wrist_yaw_link": "LeftHand",
@@ -99,7 +99,7 @@
             10
         ],
         "left_wrist_yaw_link": [
-            50,
+            100,
             10
         ],
         "right_shoulder_yaw_link": [
@@ -111,7 +111,7 @@
             10
         ],
         "right_wrist_yaw_link": [
-            50,
+            100,
             10
         ]
     },
@@ -121,27 +121,27 @@
             5
         ],
         "left_hip_yaw_link": [
-            10,
+            0,
             5
         ],
         "left_knee_link": [
-            10,
+            0,
             5
         ],
         "left_ankle_roll_link": [
-            50,
+            100,
             10
         ],
         "right_hip_yaw_link": [
-            10,
+            0,
             5
         ],
         "right_knee_link": [
-            10,
+            0,
             5
         ],
         "right_ankle_roll_link": [
-            50,
+            100,
             10
         ],
         "torso_link": [
@@ -149,28 +149,28 @@
             10
         ],
         "left_shoulder_yaw_link": [
-            5,
-            100
+            10,
+            5
         ],
         "left_elbow_link": [
             10,
             5
         ],
         "left_wrist_yaw_link": [
-            10,
-            5
+            100,
+            10
         ],
         "right_shoulder_yaw_link": [
-            5,
-            100
+            10,
+            5
         ],
         "right_elbow_link": [
             10,
             5
         ],
         "right_wrist_yaw_link": [
-            10,
-            5
+            100,
+            10
         ]
     },
     "robot_joint_offset": {
@@ -181,10 +181,10 @@
                 0.0
             ],
             [
+                0.5,
                 -0.5,
-                0.5,
-                0.5,
-                0.5
+                -0.5,
+                -0.5
             ]
         ],
         "left_hip_yaw_link": [
@@ -194,10 +194,10 @@
                 0.0
             ],
             [
-                -0.5,
-                0.5,
-                0.5,
-                0.5
+                0.4267755048530407,
+                -0.5637931078484661,
+                -0.5637931078484661,
+                -0.4267755048530407
             ]
         ],
         "left_knee_link": [
@@ -207,23 +207,23 @@
                 0.0
             ],
             [
+                0.5,
                 -0.5,
-                0.5,
-                0.5,
-                0.5
+                -0.5,
+                -0.5
             ]
         ],
         "left_ankle_roll_link": [
             [
                 0.0,
-                0.0,
+                0.02,
                 0.0
             ],
             [
+                0.5,
                 -0.5,
-                0.5,
-                0.5,
-                0.5
+                -0.5,
+                -0.5
             ]
         ],
         "right_hip_yaw_link": [
@@ -233,10 +233,10 @@
                 0.0
             ],
             [
-                -0.5,
-                0.5,
-                0.5,
-                0.5
+                0.4267755048530407,
+                -0.5637931078484661,
+                -0.5637931078484661,
+                -0.4267755048530407
             ]
         ],
         "right_knee_link": [
@@ -246,23 +246,23 @@
                 0.0
             ],
             [
+                0.5,
                 -0.5,
-                0.5,
-                0.5,
-                0.5
+                -0.5,
+                -0.5
             ]
         ],
         "right_ankle_roll_link": [
             [
                 0.0,
-                0.0,
+                -0.02,
                 0.0
             ],
             [
+                0.5,
                 -0.5,
-                0.5,
-                0.5,
-                0.5
+                -0.5,
+                -0.5
             ]
         ],
         "torso_link": [
@@ -272,10 +272,10 @@
                 0.0
             ],
             [
+                0.5,
                 -0.5,
-                0.5,
-                0.5,
-                0.5
+                -0.5,
+                -0.5
             ]
         ],
         "left_shoulder_yaw_link": [
@@ -325,9 +325,9 @@
             ],
             [
                 0.0,
-                -0.70710678,
-                -0.0,
-                -0.70710678
+                0.70710678,
+                0.0,
+                0.70710678
             ]
         ],
         "right_elbow_link": [

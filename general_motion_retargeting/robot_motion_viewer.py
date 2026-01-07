@@ -145,6 +145,7 @@ class RobotMotionViewer:
         frame_offset=np.array([-1.2, 0.0, 0.0]),
         human_motion_data: HumanData | None = None,
         robot_joints_to_show: List[str] | None = None,
+        show_frame_name: bool = False,
     ):
         """
         by default visualize robot motion.
@@ -204,7 +205,7 @@ class RobotMotionViewer:
                         self.viewer,
                         frame_size,
                         offset=frame_offset,
-                        joint_name=None,
+                        joint_name=human_body_name if show_frame_name else None,
                     )
                 if show_ref_point:
                     draw_point(pos, self.viewer, size=point_size, offset=point_offset, color=(0.0, 1.0, 0.0, 1.0))
@@ -222,7 +223,7 @@ class RobotMotionViewer:
                         self.viewer,
                         frame_size,
                         offset=frame_offset,
-                        joint_name=None,
+                        joint_name=name if show_frame_name else None,
                         is_robot_frame=True,
                     )
                 if show_ref_point:

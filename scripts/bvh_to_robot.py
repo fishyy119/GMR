@@ -29,7 +29,10 @@ def parse_args():
     parser.add_argument("--record-video", default=False, action="store_true", help="Record the video.")
     parser.add_argument("--point", default=False, action="store_true", help="Show reference points.")
     parser.add_argument("--frame", default=False, action="store_true", help="Show reference frames.")
+    parser.add_argument("--frame-name", default=False, action="store_true", help="Show reference frame names.")
     parser.add_argument("--follow", default=False, action="store_true", help="Camera follow the robot.")
+    parser.add_argument("--human-data", action=argparse.BooleanOptionalAction, default=True, help="Show human data.")
+    parser.add_argument("--robot-data", action=argparse.BooleanOptionalAction, default=True, help="Show robot data.")
     parser.add_argument(
         "--rate-limit",
         default=False,
@@ -120,8 +123,9 @@ if __name__ == "__main__":
                 follow_camera=args.follow,
                 show_ref_point=args.point,
                 show_ref_frame=args.frame,
-                human_motion_data=retargeter.scaled_human_data,
-                robot_joints_to_show=list(retargeter.ik_match_table.keys()),
+                human_motion_data=retargeter.scaled_human_data if args.human_data else None,
+                robot_joints_to_show=list(retargeter.ik_match_table.keys()) if args.robot_data else None,
+                show_frame_name=args.frame_name,
             )
 
             if args.loop:

@@ -45,7 +45,7 @@ def load_bvh_file(bvh_file: Path, format="lafan1"):
             result["RightFootMod"] = [result["RightFoot"][0], result["RightToeBase"][1]]
         elif format == "neuron":
             result["LeftFootMod"] = [result["LeftFoot"][0], result["LeftFoot"][1]]
-            result["RightFootMod"] = [result["RightFoot"][0], result["LeftFoot"][1]]
+            result["RightFootMod"] = [result["RightFoot"][0], result["RightFoot"][1]]
         else:
             raise ValueError(f"Invalid format: {format}")
 
